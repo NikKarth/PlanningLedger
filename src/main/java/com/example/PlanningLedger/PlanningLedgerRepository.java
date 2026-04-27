@@ -4,6 +4,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 interface ProtocolRepository extends JpaRepository<Protocol, Long> {}
 
+interface ProtocolStepRepository extends JpaRepository<ProtocolStep, Long> {}
+
 interface ResourceTypeRepository extends JpaRepository<ResourceType, Long> {}
 
 interface PlanRepository extends JpaRepository<Plan, Long> {}

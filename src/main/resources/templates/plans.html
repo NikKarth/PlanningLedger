@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plans - Planning Ledger</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .nav {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 15px;
+        }
+        .nav a {
+            text-decoration: none;
+            color: #007bff;
+            padding: 10px 15px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .nav a:hover {
+            background-color: #f8f9fa;
+        }
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .plan-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .plan-card {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 20px;
+            background: white;
+        }
+        .plan-card h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .plan-card p {
+            margin: 5px 0;
+            color: #666;
+        }
+        .status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .status-PROPOSED { background: #fff3cd; color: #856404; }
+        .status-IN_PROGRESS { background: #d1ecf1; color: #0c5460; }
+        .status-COMPLETED { background: #d4edda; color: #155724; }
+        .status-SUSPENDED { background: #f8d7da; color: #721c24; }
+        .status-ABANDONED { background: #e2e3e5; color: #383d41; }
+        .children-list {
+            margin-top: 10px;
+        }
+        .child-item {
+            background: #f8f9fa;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        .form-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab-button {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 4px 4px 0 0;
+        }
+        .tab-button.active {
+            background: white;
+            border-bottom: 1px solid white;
+        }
+        .tab-button:hover {
+            background: #e9ecef;
+        }
+        .tab-content {
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 0 4px 4px 4px;
+        }
+        .add-step {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .add-step:hover {
+            background: #218838;
+        }
+        .step-form {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .step-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .remove-step {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+        .remove-step:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Plans</h1>
+
+        <div class="nav">
+            <a href="/">Dashboard</a>
+            <a href="/protocols">Protocols</a>
+            <a href="/resource-types">Resource Types</a>
+            <a href="/plans">Plans</a>
+        </div>
+
+        <div class="form-section">
+            <h2>Create New Plan</h2>
+            
+            <div class="form-tabs">
+                <button type="button" class="tab-button active" onclick="showTab('basic')">Basic Plan</button>
+                <button type="button" class="tab-button" onclick="showTab('from-protocol')">From Protocol</button>
+                <button type="button" class="tab-button" onclick="showTab('with-steps')">With Steps</button>
+            </div>
+
+            <div id="basic-tab" class="tab-content">
+                <form th:action="@{/plans}" method="post">
+                    <div class="form-group">
+                        <label for="name">Name:</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <button type="submit">Create Plan</button>
+                </form>
+            </div>
+
+            <div id="from-protocol-tab" class="tab-content" style="display: none;">
+                <form th:action="@{/plans/from-protocol}" method="post">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="protocolId">Select Protocol:</label>
+                            <select id="protocolId" name="protocolId" required>
+                                <option value="">Choose a protocol...</option>
+                                <option th:each="protocol : ${protocols}" th:value="${protocol.id}" th:text="${protocol.name}">Protocol Name</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="planName">Plan Name:</label>
+                            <input type="text" id="planName" name="planName" required placeholder="Name for the new plan">
+                        </div>
+                    </div>
+                    <button type="submit">Create Plan from Protocol</button>
+                </form>
+            </div>
+
+            <div id="with-steps-tab" class="tab-content" style="display: none;">
+                <form th:action="@{/plans/with-steps}" method="post" id="planWithStepsForm">
+                    <div class="form-group">
+                        <label for="planName">Plan Name:</label>
+                        <input type="text" id="planName" name="planName" required>
+                    </div>
+
+                    <h3>Plan Steps</h3>
+                    <div id="stepsContainer">
+                        <!-- Steps will be added here dynamically -->
+                    </div>
+
+                    <button type="button" class="add-step" onclick="addStep()">Add Step</button>
+                    <br><br>
+                    <button type="submit">Create Plan with Steps</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="plan-list">
+            <div th:each="plan : ${plans}" class="plan-card">
+                <h3>
+                    <a th:href="@{'/plans/' + ${plan.id}}" th:text="${plan.name}" style="text-decoration: none; color: inherit;">Plan Name</a>
+                </h3>
+                <p><strong>Status:</strong>
+                    <span th:class="'status status-' + ${plan.status}" th:text="${plan.status}">PROPOSED</span>
+                </p>
+                <div class="children-list">
+                    <p><strong>Children:</strong></p>
+                    <div th:each="child : ${plan.children}" class="child-item">
+                        <span th:if="${child.class.simpleName == 'ProposedAction'}" th:text="${child.name}">Action Name</span>
+                        <span th:if="${child.class.simpleName == 'Plan'}" th:text="'Sub-plan: ' + ${child.name}">Sub-plan Name</span>
+                        <span th:class="'status status-' + ${child.status}" th:text="' (' + ${child.status} + ')'"> (STATUS)</span>
+                    </div>
+                    <div th:if="${#lists.isEmpty(plan.children)}" class="child-item">
+                        No children defined
+                    </div>
+                </div>
+                <p th:if="${plan.sourceProtocol}"><strong>Source Protocol:</strong> <span th:text="${plan.sourceProtocol.name}">Protocol Name</span></p>
+            </div>
+            <div th:if="${#lists.isEmpty(plans)}" class="plan-card">
+                <p>No plans created yet.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stepCount = 0;
+
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').style.display = 'block';
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+        }
+
+        function addStep() {
+            stepCount++;
+            const stepsContainer = document.getElementById('stepsContainer');
+
+            const stepDiv = document.createElement('div');
+            stepDiv.className = 'step-form';
+            stepDiv.id = 'step-' + stepCount;
+
+            stepDiv.innerHTML = `
+                <div class="step-header">
+                    <h4>Step ${stepCount}</h4>
+                    <button type="button" class="remove-step" onclick="removeStep(${stepCount})">Remove</button>
+                </div>
+                <div class="form-group">
+                    <label>Step Name:</label>
+                    <input type="text" name="stepNames[]" required>
+                </div>
+                <div class="form-group">
+                    <label>Type:</label>
+                    <select name="stepTypes[]">
+                        <option value="ACTION">Action</option>
+                        <option value="SUB_PLAN">Sub-Plan</option>
+                    </select>
+                </div>
+            `;
+
+            stepsContainer.appendChild(stepDiv);
+        }
+
+        function removeStep(stepId) {
+            const stepDiv = document.getElementById('step-' + stepId);
+            if (stepDiv) {
+                stepDiv.remove();
+            }
+        }
+
+        // Add one initial step by default when the with-steps tab is shown
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initially show basic tab
+            showTab('basic');
+        });
+    </script>
+</body>
+</html>

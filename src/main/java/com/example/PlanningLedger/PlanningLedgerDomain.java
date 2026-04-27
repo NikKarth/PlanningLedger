@@ -55,8 +55,8 @@ class ResourceType {
     private String kind; // ASSET or CONSUMABLE
     private String unit;
 
-    @OneToOne(cascade = CascadeType.ALL)
-    private Account poolAccount;
+    @OneToMany(mappedBy = "resourceType", cascade = CascadeType.ALL)
+    private List<Account> poolAccounts = new ArrayList<>();
 
     public Long getId() { return id; }
     public String getName() { return name; }
@@ -65,8 +65,8 @@ class ResourceType {
     public void setKind(String kind) { this.kind = kind; }
     public String getUnit() { return unit; }
     public void setUnit(String unit) { this.unit = unit; }
-    public Account getPoolAccount() { return poolAccount; }
-    public void setPoolAccount(Account poolAccount) { this.poolAccount = poolAccount; }
+    public List<Account> getPoolAccounts() { return poolAccounts; }
+    public void setPoolAccounts(List<Account> poolAccounts) { this.poolAccounts = poolAccounts; }
 }
 
 @Entity
@@ -77,6 +77,9 @@ class Account {
     private String name;
     private String kind; // POOL, USAGE, ALERT MEMO
 
+    @ManyToOne
+    private ResourceType resourceType;
+
     @OneToMany(mappedBy = "account", cascade = CascadeType.ALL)
     private List<Entry> entries = new ArrayList<>();
 
@@ -85,6 +88,8 @@ class Account {
     public void setName(String name) { this.name = name; }
     public String getKind() { return kind; }
     public void setKind(String kind) { this.kind = kind; }
+    public ResourceType getResourceType() { return resourceType; }
+    public void setResourceType(ResourceType resourceType) { this.resourceType = resourceType; }
     public List<Entry> getEntries() { return entries; }
     public void setEntries(List<Entry> entries) { this.entries = entries; }
 }
