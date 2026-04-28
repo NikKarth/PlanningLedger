@@ -15,3 +15,9 @@ interface ProposedActionRepository extends JpaRepository<ProposedAction, Long> {
 interface AccountRepository extends JpaRepository<Account, Long> {}
 
 interface TransactionRepository extends JpaRepository<Transaction, Long> {}
+
+interface ImplementedActionRepository extends JpaRepository<ImplementedAction, Long> {}
+
+interface ResourceAllocationRepository extends JpaRepository<ResourceAllocation, Long> {}
+
+interface EntryRepository extends JpaRepository<Entry, Long> {}

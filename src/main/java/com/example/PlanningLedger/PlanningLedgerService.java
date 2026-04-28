@@ -52,6 +52,12 @@ class ResourceTypeService {
     @Autowired
     private AccountRepository accountRepository;
 
+    @Autowired
+    private TransactionRepository transactionRepository;
+
+    @Autowired
+    private EntryRepository entryRepository;
+
     public List<ResourceType> getAllResourceTypes() {
         return resourceTypeRepository.findAll();
     }
@@ -64,7 +70,7 @@ class ResourceTypeService {
         return resourceTypeRepository.findById(id);
     }
 
-    public Account createPoolAccountForResourceType(Long resourceTypeId, String accountName) {
+    public Account createPoolAccountForResourceType(Long resourceTypeId, String accountName, Double initialBalance) {
         ResourceType resourceType = resourceTypeRepository.findById(resourceTypeId)
             .orElseThrow(() -> new RuntimeException("ResourceType not found"));
 
@@ -73,6 +79,20 @@ class ResourceTypeService {
         account.setKind("POOL");
         account.setResourceType(resourceType);
         account = accountRepository.save(account);
+
+        if (initialBalance != null && initialBalance != 0) {
+            Transaction tx = new Transaction();
+            tx.setDescription("Initial balance for pool '" + accountName + "'");
+            transactionRepository.save(tx);
+
+            Entry entry = new Entry();
+            entry.setAccount(account);
+            entry.setAmount(initialBalance);
+            entry.setChargedAt(new java.util.Date());
+            entry.setBookedAt(new java.util.Date());
+            entry.setTransaction(tx);
+            entryRepository.save(entry);
+        }
 
         resourceType.getPoolAccounts().add(account);
         resourceTypeRepository.save(resourceType);
@@ -162,10 +182,37 @@ class ActionService {
     @Autowired
     private ProposedActionRepository proposedActionRepository;
 
+    @Autowired
+    private ImplementedActionRepository implementedActionRepository;
+
+    @Autowired
+    private ResourceTypeRepository resourceTypeRepository;
+
+    @Autowired
+    private ResourceAllocationRepository resourceAllocationRepository;
+
+    @Autowired
+    private AccountRepository accountRepository;
+
+    @Autowired
+    private TransactionRepository transactionRepository;
+
+    @Autowired
+    private EntryRepository entryRepository;
+
     public ProposedAction implementAction(Long id) {
         ProposedAction action = proposedActionRepository.findById(id).orElseThrow();
         action.setState("IN_PROGRESS");
-        return proposedActionRepository.save(action);
+        proposedActionRepository.save(action);
+
+        ImplementedAction impl = new ImplementedAction();
+        impl.setProposedAction(action);
+        impl.setActualStart(new java.util.Date());
+        impl.setActualParty("Default Party");
+        impl.setActualLocation("Default Location");
+        implementedActionRepository.save(impl);
+
+        return action;
     }
 
     public ProposedAction completeAction(Long id) {
@@ -190,5 +237,40 @@ class ActionService {
         ProposedAction action = proposedActionRepository.findById(id).orElseThrow();
         action.setState("ABANDONED");
         return proposedActionRepository.save(action);
+    }
+
+    public ResourceAllocation allocateResource(Long actionId, Long resourceTypeId,
+                                               Double quantity, String kind,
+                                               String assetId, String timePeriod) {
+        ProposedAction action = proposedActionRepository.findById(actionId).orElseThrow();
+        ResourceType resourceType = resourceTypeRepository.findById(resourceTypeId).orElseThrow();
+
+        ResourceAllocation allocation = new ResourceAllocation();
+        allocation.setAction(action);
+        allocation.setResourceType(resourceType);
+        allocation.setQuantity(quantity);
+        allocation.setKind(kind);
+        allocation.setAssetId(assetId);
+        allocation.setTimePeriod(timePeriod);
+        resourceAllocationRepository.save(allocation);
+
+        if (!resourceType.getPoolAccounts().isEmpty()) {
+            Account pool = resourceType.getPoolAccounts().get(0);
+
+            Transaction tx = new Transaction();
+            tx.setDescription("Allocation: " + quantity + " " + resourceType.getUnit()
+                    + " for action '" + action.getName() + "'");
+            transactionRepository.save(tx);
+
+            Entry entry = new Entry();
+            entry.setAccount(pool);
+            entry.setAmount(-quantity);
+            entry.setChargedAt(new java.util.Date());
+            entry.setBookedAt(new java.util.Date());
+            entry.setTransaction(tx);
+            entryRepository.save(entry);
+        }
+
+        return allocation;
     }
 }

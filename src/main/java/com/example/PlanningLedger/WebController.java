@@ -18,6 +18,9 @@ public class WebController {
     @Autowired
     private PlanService planService;
 
+    @Autowired
+    private ActionService actionService;
+
     @GetMapping("/")
     public String index(Model model) {
         model.addAttribute("protocols", protocolService.getAllProtocols());
@@ -100,20 +103,22 @@ public class WebController {
     public String createResourceType(@RequestParam String name,
                                     @RequestParam String kind,
                                     @RequestParam String unit,
-                                    @RequestParam(required = false) String[] poolAccountNames) {
+                                    @RequestParam(required = false) String[] poolAccountNames,
+                                    @RequestParam(required = false) Double[] poolAccountInitialBalances) {
         ResourceType resourceType = new ResourceType();
         resourceType.setName(name);
         resourceType.setKind(kind);
         resourceType.setUnit(unit);
 
-        // Create the resource type first
         ResourceType savedResourceType = resourceTypeService.createResourceType(resourceType);
 
-        // Add pool accounts if any were provided
         if (poolAccountNames != null && poolAccountNames.length > 0) {
-            for (String accountName : poolAccountNames) {
+            for (int i = 0; i < poolAccountNames.length; i++) {
+                String accountName = poolAccountNames[i];
                 if (accountName != null && !accountName.trim().isEmpty()) {
-                    resourceTypeService.createPoolAccountForResourceType(savedResourceType.getId(), accountName);
+                    Double balance = (poolAccountInitialBalances != null && i < poolAccountInitialBalances.length)
+                            ? poolAccountInitialBalances[i] : null;
+                    resourceTypeService.createPoolAccountForResourceType(savedResourceType.getId(), accountName, balance);
                 }
             }
         }
@@ -132,8 +137,10 @@ public class WebController {
     }
 
     @PostMapping("/resource-types/{id}/pool-account")
-    public String createPoolAccount(@PathVariable Long id, @RequestParam String accountName) {
-        resourceTypeService.createPoolAccountForResourceType(id, accountName);
+    public String createPoolAccount(@PathVariable Long id,
+                                    @RequestParam String accountName,
+                                    @RequestParam(required = false) Double initialBalance) {
+        resourceTypeService.createPoolAccountForResourceType(id, accountName, initialBalance);
         return "redirect:/resource-types/" + id;
     }
 
@@ -155,9 +162,22 @@ public class WebController {
         if (plan.isPresent()) {
             model.addAttribute("plan", plan.get());
             model.addAttribute("protocols", protocolService.getAllProtocols());
+            model.addAttribute("resourceTypes", resourceTypeService.getAllResourceTypes());
             return "plan-detail";
         }
         return "redirect:/plans";
+    }
+
+    @PostMapping("/plans/{planId}/actions/{actionId}/allocate")
+    public String allocateResource(@PathVariable Long planId,
+                                   @PathVariable Long actionId,
+                                   @RequestParam Long resourceTypeId,
+                                   @RequestParam Double quantity,
+                                   @RequestParam String kind,
+                                   @RequestParam(required = false) String assetId,
+                                   @RequestParam(required = false) String timePeriod) {
+        actionService.allocateResource(actionId, resourceTypeId, quantity, kind, assetId, timePeriod);
+        return "redirect:/plans/" + planId;
     }
 
     @PostMapping("/plans/from-protocol")

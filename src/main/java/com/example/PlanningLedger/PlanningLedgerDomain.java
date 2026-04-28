@@ -262,6 +262,9 @@ class ProposedAction extends PlanNode {
     private String name;
     private String state = "PROPOSED"; // PROPOSED, IN_PROGRESS, etc.
 
+    @OneToOne(mappedBy = "proposedAction", cascade = CascadeType.ALL)
+    private ImplementedAction implementedAction;
+
     @OneToMany(mappedBy = "action", cascade = CascadeType.ALL)
     private List<ResourceAllocation> allocations = new ArrayList<>();
 
@@ -290,6 +293,7 @@ class ProposedAction extends PlanNode {
     public void setName(String name) { this.name = name; }
     public String getState() { return state; }
     public void setState(String state) { this.state = state; }
+    public ImplementedAction getImplementedAction() { return implementedAction; }
     public List<ResourceAllocation> getAllocations() { return allocations; }
     public void setAllocations(List<ResourceAllocation> allocations) { this.allocations = allocations; }
 }

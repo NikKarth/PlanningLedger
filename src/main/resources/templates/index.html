@@ -81,6 +81,28 @@
         .status-COMPLETED { background: #d4edda; color: #155724; }
         .status-SUSPENDED { background: #f8d7da; color: #721c24; }
         .status-ABANDONED { background: #e2e3e5; color: #383d41; }
+        .pool-accounts {
+            margin-top: 8px;
+            font-size: 0.82em;
+        }
+        .pool-account-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 2px 0;
+            color: #555;
+        }
+        .balance-ok { color: #155724; font-weight: bold; }
+        .balance-overdrawn { color: #721c24; font-weight: bold; }
+        .overdraft-alert {
+            display: inline-block;
+            padding: 1px 7px;
+            background: #f8d7da;
+            color: #721c24;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -115,6 +137,18 @@
                     <h3 th:text="${resourceType.name}">Resource Name</h3>
                     <p><strong>Kind:</strong> <span th:text="${resourceType.kind}">ASSET</span></p>
                     <p><strong>Unit:</strong> <span th:text="${resourceType.unit}">unit</span></p>
+                    <div th:if="${!#lists.isEmpty(resourceType.poolAccounts)}" class="pool-accounts">
+                        <strong>Pool Accounts:</strong>
+                        <div th:each="account : ${resourceType.poolAccounts}" class="pool-account-row">
+                            <span th:text="${account.name}"></span>:
+                            <th:block th:with="balance=${account.entries.isEmpty() ? 0.0 : #aggregates.sum(account.entries.![amount])}">
+                                <span th:class="${balance < 0} ? 'balance-overdrawn' : 'balance-ok'"
+                                      th:text="${balance}"></span>
+                                <span th:text="${resourceType.unit}"></span>
+                                <span th:if="${balance < 0}" class="overdraft-alert">&#9888; Overdrawn</span>
+                            </th:block>
+                        </div>
+                    </div>
                 </div>
                 <div th:if="${#lists.isEmpty(resourceTypes)}" class="item-card">
                     <p>No resource types defined yet.</p>

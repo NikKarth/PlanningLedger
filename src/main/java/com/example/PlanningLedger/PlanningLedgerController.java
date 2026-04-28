@@ -62,27 +62,27 @@ class ActionController {
     private ActionService actionService;
 
     @PostMapping("/{id}/implement")
-    public ProposedAction implementAction(@PathVariable Long id) {
-        return actionService.implementAction(id);
+    public void implementAction(@PathVariable Long id) {
+        actionService.implementAction(id);
     }
 
     @PostMapping("/{id}/complete")
-    public ProposedAction completeAction(@PathVariable Long id) {
-        return actionService.completeAction(id);
+    public void completeAction(@PathVariable Long id) {
+        actionService.completeAction(id);
     }
 
     @PostMapping("/{id}/suspend")
-    public ProposedAction suspendAction(@PathVariable Long id) {
-        return actionService.suspendAction(id);
+    public void suspendAction(@PathVariable Long id) {
+        actionService.suspendAction(id);
     }
 
     @PostMapping("/{id}/resume")
-    public ProposedAction resumeAction(@PathVariable Long id) {
-        return actionService.resumeAction(id);
+    public void resumeAction(@PathVariable Long id) {
+        actionService.resumeAction(id);
     }
 
     @PostMapping("/{id}/abandon")
-    public ProposedAction abandonAction(@PathVariable Long id) {
-        return actionService.abandonAction(id);
+    public void abandonAction(@PathVariable Long id) {
+        actionService.abandonAction(id);
     }
 }
