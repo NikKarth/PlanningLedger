@@ -134,6 +134,9 @@ class PlanService {
     @Autowired
     private ProtocolRepository protocolRepository;
 
+    @Autowired
+    private ResourceTypeRepository resourceTypeRepository;
+
     public List<Plan> getAllPlans() {
         return planRepository.findAll();
     }
@@ -192,6 +195,45 @@ class PlanService {
 
     public void deletePlan(Long id) {
         planRepository.deleteById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlanReportRow> generateReport(Long planId) {
+        Plan plan = planRepository.findById(planId).orElseThrow();
+        List<ResourceType> resourceTypes = resourceTypeRepository.findAll();
+
+        initializePlanNode(plan);
+
+        List<PlanReportRow> rows = new ArrayList<>();
+        DepthFirstPlanIterator iterator = new DepthFirstPlanIterator(plan);
+        while (iterator.hasNext()) {
+            PlanNode node = iterator.next();
+            int depth = iterator.getCurrentDepth();
+
+            Map<String, Double> totals = new LinkedHashMap<>();
+            for (ResourceType rt : resourceTypes) {
+                totals.put(rt.getName() + " (" + rt.getUnit() + ")",
+                           node.getTotalAllocatedQuantity(rt));
+            }
+
+            String nodeType = (node instanceof Plan) ? "Plan" : "Action";
+            rows.add(new PlanReportRow(node.getName(), node.getStatus(), nodeType, depth, totals));
+        }
+        return rows;
+    }
+
+    private void initializePlanNode(PlanNode node) {
+        if (node instanceof Plan) {
+            List<PlanNode> children = ((Plan) node).getChildren();
+            children.size();
+            for (PlanNode child : children) {
+                initializePlanNode(child);
+            }
+        } else if (node instanceof ProposedAction) {
+            for (ResourceAllocation alloc : ((ProposedAction) node).getAllocations()) {
+                alloc.getResourceType().getName();
+            }
+        }
     }
 }
 

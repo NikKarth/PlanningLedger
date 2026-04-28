@@ -21,6 +21,17 @@ public class WebController {
     @Autowired
     private ActionService actionService;
 
+    @GetMapping("/report")
+    public String report(@RequestParam(required = false) Long planId, Model model) {
+        model.addAttribute("plans", planService.getAllPlans());
+        model.addAttribute("selectedPlanId", planId);
+        if (planId != null) {
+            model.addAttribute("reportRows", planService.generateReport(planId));
+            model.addAttribute("resourceTypes", resourceTypeService.getAllResourceTypes());
+        }
+        return "report";
+    }
+
     @GetMapping("/ledger")
     public String ledger(Model model) {
         List<Account> accounts = resourceTypeService.getAllAccounts();

@@ -197,6 +197,7 @@ abstract class PlanNode {
     public Plan getParent() { return parent; }
     public void setParent(Plan parent) { this.parent = parent; }
 
+    public abstract String getName();
     public abstract String getStatus();
     public abstract Double getTotalAllocatedQuantity(ResourceType resourceType);
     public abstract void accept(PlanNodeVisitor visitor);
