@@ -176,6 +176,22 @@
             margin: 0 0 15px 0;
             color: #333;
         }
+        .transition-select {
+            margin-top: 10px;
+            padding: 4px 8px;
+            border: 1px solid #007bff;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            color: #007bff;
+            background: white;
+            width: auto;
+        }
+        .transition-select:disabled {
+            border-color: #ccc;
+            color: #999;
+            cursor: default;
+        }
     </style>
 </head>
 <body>
@@ -258,6 +274,19 @@
                             <div class="node-status">
                                 <span th:class="'status status-' + ${child.status}" th:text="${child.status}">STATUS</span>
                             </div>
+                            <div th:if="${child instanceof T(com.example.PlanningLedger.ProposedAction)}">
+                                <select class="transition-select"
+                                        th:disabled="${child.status == 'COMPLETED' or child.status == 'ABANDONED'}"
+                                        th:attr="data-action-id=${child.id}"
+                                        onchange="transitionAction(this)">
+                                    <option value="">-- Transition --</option>
+                                    <option th:if="${child.status == 'PROPOSED'}" value="implement">implement → IN_PROGRESS</option>
+                                    <option th:if="${child.status == 'PROPOSED' or child.status == 'IN_PROGRESS'}" value="suspend">suspend → SUSPENDED</option>
+                                    <option th:if="${child.status == 'PROPOSED' or child.status == 'IN_PROGRESS' or child.status == 'SUSPENDED'}" value="abandon">abandon → ABANDONED</option>
+                                    <option th:if="${child.status == 'IN_PROGRESS'}" value="complete">complete → COMPLETED</option>
+                                    <option th:if="${child.status == 'SUSPENDED'}" value="resume">resume → PROPOSED</option>
+                                </select>
+                            </div>
                         </div>
                         <div th:if="${#lists.isEmpty(plan.children)}" class="tree-node">
                             <em>No child nodes yet.</em>
@@ -274,5 +303,24 @@
             </form>
         </div>
     </div>
+    <script>
+        function transitionAction(selectEl) {
+            var transition = selectEl.value;
+            if (!transition) return;
+            var actionId = selectEl.getAttribute('data-action-id');
+            fetch('/api/actions/' + actionId + '/' + transition, { method: 'POST' })
+                .then(function(response) {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        return response.text().then(function(msg) { throw new Error(msg); });
+                    }
+                })
+                .catch(function(err) {
+                    alert('Transition failed: ' + err.message);
+                    selectEl.value = '';
+                });
+        }
+    </script>
 </body>
 </html>
