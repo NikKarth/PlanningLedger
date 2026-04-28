@@ -2,6 +2,7 @@ package com.example.PlanningLedger;
 
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 @Service
@@ -102,6 +103,23 @@ class ResourceTypeService {
 
     public void deleteResourceType(Long id) {
         resourceTypeRepository.deleteById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Account> getAllAccounts() {
+        List<Account> accounts = accountRepository.findAll();
+        for (Account account : accounts) {
+            if (account.getResourceType() != null) {
+                account.getResourceType().getName();
+                account.getResourceType().getUnit();
+            }
+            for (Entry entry : account.getEntries()) {
+                if (entry.getTransaction() != null) {
+                    entry.getTransaction().getDescription();
+                }
+            }
+        }
+        return accounts;
     }
 }
 

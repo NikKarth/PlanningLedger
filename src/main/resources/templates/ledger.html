@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ledger - Planning Ledger</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-bottom: 10px; }
+        .nav { display: flex; gap: 20px; margin-bottom: 30px; border-bottom: 1px solid #ddd; padding-bottom: 15px; }
+        .nav a { text-decoration: none; color: #007bff; padding: 10px 15px; border-radius: 4px; transition: background-color 0.3s; }
+        .nav a:hover { background-color: #f8f9fa; }
+        .section { margin-bottom: 35px; }
+        .section h2 { color: #555; border-bottom: 2px solid #007bff; padding-bottom: 5px; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { background: #007bff; color: white; padding: 10px 12px; text-align: left; }
+        td { padding: 9px 12px; border-bottom: 1px solid #eee; vertical-align: top; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8f9fa; }
+        .balance-positive { color: #155724; font-weight: bold; }
+        .balance-negative { color: #721c24; font-weight: bold; }
+        .overdraft-badge { margin-left: 8px; padding: 1px 7px; background: #f8d7da; color: #721c24; border-radius: 4px; font-size: 0.85em; font-weight: bold; }
+        .amount-credit { color: #155724; }
+        .amount-debit  { color: #721c24; }
+        .selector-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .selector-row label { font-weight: bold; white-space: nowrap; }
+        .selector-row select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; min-width: 280px; }
+        .account-entries { display: none; }
+        .account-entries.active { display: block; }
+        .no-entries { color: #888; font-style: italic; padding: 16px 0; }
+        .entry-count { font-size: 0.85em; color: #666; font-weight: normal; margin-left: 8px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="nav">
+        <a href="/">Dashboard</a>
+        <a href="/protocols">Protocols</a>
+        <a href="/resource-types">Resource Types</a>
+        <a href="/plans">Plans</a>
+        <a href="/ledger">Ledger</a>
+    </div>
+
+    <h1>Ledger</h1>
+
+    <!-- Pool account balances summary -->
+    <div class="section">
+        <h2>Pool Account Balances</h2>
+        <p th:if="${accounts.isEmpty()}">No accounts found.</p>
+        <table th:if="${!accounts.isEmpty()}">
+            <thead>
+                <tr>
+                    <th>Account</th>
+                    <th>Resource Type</th>
+                    <th>Unit</th>
+                    <th>Balance</th>
+                    <th>Entries</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="account : ${accounts}">
+                    <td th:text="${account.name}"></td>
+                    <td th:text="${account.resourceType != null ? account.resourceType.name : '—'}"></td>
+                    <td th:text="${account.resourceType != null ? account.resourceType.unit : '—'}"></td>
+                    <td>
+                        <span th:with="b=${balances[account.id]}"
+                              th:class="${b < 0} ? 'balance-negative' : 'balance-positive'"
+                              th:text="${b}"></span>
+                        <span th:if="${balances[account.id] < 0}" class="overdraft-badge">&#9888; Overdrawn</span>
+                    </td>
+                    <td th:text="${account.entries.size()}"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Entry viewer -->
+    <div class="section">
+        <h2>Entry Viewer</h2>
+        <p th:if="${accounts.isEmpty()}">No accounts to display.</p>
+
+        <div th:if="${!accounts.isEmpty()}">
+            <div class="selector-row">
+                <label for="accountSelect">View entries for:</label>
+                <select id="accountSelect" onchange="showAccount(this.value)">
+                    <option value="">-- Select an account --</option>
+                    <option th:each="account : ${accounts}"
+                            th:value="${account.id}"
+                            th:text="${account.name + (account.resourceType != null ? ' (' + account.resourceType.name + ')' : '')}">
+                    </option>
+                </select>
+            </div>
+
+            <div th:each="account : ${accounts}"
+                 th:id="'entries-' + ${account.id}"
+                 class="account-entries">
+
+                <h3>
+                    <span th:text="${account.name}"></span>
+                    <span class="entry-count"
+                          th:text="'(' + ${account.entries.size()} + ' entries · balance: ' + ${balances[account.id]}
+                                   + (account.resourceType != null ? ' ' + account.resourceType.unit : '') + ')'">
+                    </span>
+                </h3>
+
+                <p th:if="${account.entries.isEmpty()}" class="no-entries">No entries recorded for this account.</p>
+
+                <table th:if="${!account.entries.isEmpty()}">
+                    <thead>
+                        <tr>
+                            <th>Booked Date</th>
+                            <th>Charged Date</th>
+                            <th>Amount</th>
+                            <th>Originating Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="entry : ${account.entries}">
+                            <td th:text="${entry.bookedAt  != null ? #dates.format(entry.bookedAt,  'dd MMM yyyy HH:mm') : '—'}"></td>
+                            <td th:text="${entry.chargedAt != null ? #dates.format(entry.chargedAt, 'dd MMM yyyy HH:mm') : '—'}"></td>
+                            <td th:class="${entry.amount != null and entry.amount >= 0} ? 'amount-credit' : 'amount-debit'"
+                                th:text="${entry.amount != null ? (entry.amount >= 0 ? '+' : '') + entry.amount : '—'}"></td>
+                            <td th:text="${entry.transaction != null ? entry.transaction.description : '—'}"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showAccount(accountId) {
+        document.querySelectorAll('.account-entries').forEach(function(el) {
+            el.classList.remove('active');
+        });
+        if (accountId) {
+            var target = document.getElementById('entries-' + accountId);
+            if (target) target.classList.add('active');
+        }
+    }
+</script>
+</body>
+</html>

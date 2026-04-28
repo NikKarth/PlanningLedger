@@ -4,7 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import java.util.Optional;
+import java.util.*;
 
 @Controller
 public class WebController {
@@ -20,6 +20,22 @@ public class WebController {
 
     @Autowired
     private ActionService actionService;
+
+    @GetMapping("/ledger")
+    public String ledger(Model model) {
+        List<Account> accounts = resourceTypeService.getAllAccounts();
+        Map<Long, Double> balances = new LinkedHashMap<>();
+        for (Account account : accounts) {
+            double b = 0.0;
+            for (Entry e : account.getEntries()) {
+                if (e.getAmount() != null) b += e.getAmount();
+            }
+            balances.put(account.getId(), b);
+        }
+        model.addAttribute("accounts", accounts);
+        model.addAttribute("balances", balances);
+        return "ledger";
+    }
 
     @GetMapping("/")
     public String index(Model model) {
