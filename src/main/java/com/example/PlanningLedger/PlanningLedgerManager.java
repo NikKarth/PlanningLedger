@@ -6,7 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 @Service
-class ProtocolService {
+class ProtocolManager {
     @Autowired
     private ProtocolRepository protocolRepository;
 
@@ -46,7 +46,7 @@ class ProtocolService {
 }
 
 @Service
-class ResourceTypeService {
+class ResourceTypeManager {
     @Autowired
     private ResourceTypeRepository resourceTypeRepository;
 
@@ -124,7 +124,7 @@ class ResourceTypeService {
 }
 
 @Service
-class PlanService {
+class PlanManager {
     @Autowired
     private PlanRepository planRepository;
 
@@ -238,7 +238,7 @@ class PlanService {
 }
 
 @Service
-class ActionService {
+class ActionManager {
     @Autowired
     private ProposedActionRepository proposedActionRepository;
 

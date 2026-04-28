@@ -10,31 +10,31 @@ import java.util.*;
 public class WebController {
 
     @Autowired
-    private ProtocolService protocolService;
+    private ProtocolManager protocolManager;
 
     @Autowired
-    private ResourceTypeService resourceTypeService;
+    private ResourceTypeManager resourceTypeManager;
 
     @Autowired
-    private PlanService planService;
+    private PlanManager planManager;
 
     @Autowired
-    private ActionService actionService;
+    private ActionManager actionManager;
 
     @GetMapping("/report")
     public String report(@RequestParam(required = false) Long planId, Model model) {
-        model.addAttribute("plans", planService.getAllPlans());
+        model.addAttribute("plans", planManager.getAllPlans());
         model.addAttribute("selectedPlanId", planId);
         if (planId != null) {
-            model.addAttribute("reportRows", planService.generateReport(planId));
-            model.addAttribute("resourceTypes", resourceTypeService.getAllResourceTypes());
+            model.addAttribute("reportRows", planManager.generateReport(planId));
+            model.addAttribute("resourceTypes", resourceTypeManager.getAllResourceTypes());
         }
         return "report";
     }
 
     @GetMapping("/ledger")
     public String ledger(Model model) {
-        List<Account> accounts = resourceTypeService.getAllAccounts();
+        List<Account> accounts = resourceTypeManager.getAllAccounts();
         Map<Long, Double> balances = new LinkedHashMap<>();
         for (Account account : accounts) {
             double b = 0.0;
@@ -50,15 +50,15 @@ public class WebController {
 
     @GetMapping("/")
     public String index(Model model) {
-        model.addAttribute("protocols", protocolService.getAllProtocols());
-        model.addAttribute("resourceTypes", resourceTypeService.getAllResourceTypes());
-        model.addAttribute("plans", planService.getAllPlans());
+        model.addAttribute("protocols", protocolManager.getAllProtocols());
+        model.addAttribute("resourceTypes", resourceTypeManager.getAllResourceTypes());
+        model.addAttribute("plans", planManager.getAllPlans());
         return "index";
     }
 
     @GetMapping("/protocols")
     public String protocols(Model model) {
-        model.addAttribute("protocols", protocolService.getAllProtocols());
+        model.addAttribute("protocols", protocolManager.getAllProtocols());
         return "protocols";
     }
 
@@ -72,7 +72,7 @@ public class WebController {
         protocol.setDescription(description);
 
         // Create the protocol first
-        Protocol savedProtocol = protocolService.createProtocol(protocol);
+        Protocol savedProtocol = protocolManager.createProtocol(protocol);
 
         // Add steps if any were provided
         if (stepSubProtocols != null && stepSubProtocols.length > 0) {
@@ -81,7 +81,7 @@ public class WebController {
                 if (subProtocol != null && !subProtocol.trim().isEmpty()) {
                     String dependsOn = (stepDependencies != null && i < stepDependencies.length) ?
                                      stepDependencies[i] : null;
-                    protocolService.addStepToProtocol(savedProtocol.getId(), subProtocol, dependsOn);
+                    protocolManager.addStepToProtocol(savedProtocol.getId(), subProtocol, dependsOn);
                 }
             }
         }
@@ -91,20 +91,20 @@ public class WebController {
 
     @GetMapping("/resource-types")
     public String resourceTypes(Model model) {
-        model.addAttribute("resourceTypes", resourceTypeService.getAllResourceTypes());
+        model.addAttribute("resourceTypes", resourceTypeManager.getAllResourceTypes());
         return "resource-types";
     }
 
     @GetMapping("/plans")
     public String plans(Model model) {
-        model.addAttribute("plans", planService.getAllPlans());
-        model.addAttribute("protocols", protocolService.getAllProtocols());
+        model.addAttribute("plans", planManager.getAllPlans());
+        model.addAttribute("protocols", protocolManager.getAllProtocols());
         return "plans";
     }
 
     @GetMapping("/protocols/{id}")
     public String protocolDetail(@PathVariable Long id, Model model) {
-        Optional<Protocol> protocol = protocolService.getProtocolById(id);
+        Optional<Protocol> protocol = protocolManager.getProtocolById(id);
         if (protocol.isPresent()) {
             model.addAttribute("protocol", protocol.get());
             return "protocol-detail";
@@ -116,13 +116,13 @@ public class WebController {
     public String addStepToProtocol(@PathVariable Long id,
                                    @RequestParam String subProtocol,
                                    @RequestParam(required = false) String dependsOn) {
-        protocolService.addStepToProtocol(id, subProtocol, dependsOn);
+        protocolManager.addStepToProtocol(id, subProtocol, dependsOn);
         return "redirect:/protocols/" + id;
     }
 
     @PostMapping("/protocols/{id}/delete")
     public String deleteProtocol(@PathVariable Long id) {
-        protocolService.deleteProtocol(id);
+        protocolManager.deleteProtocol(id);
         return "redirect:/protocols";
     }
 
@@ -137,7 +137,7 @@ public class WebController {
         resourceType.setKind(kind);
         resourceType.setUnit(unit);
 
-        ResourceType savedResourceType = resourceTypeService.createResourceType(resourceType);
+        ResourceType savedResourceType = resourceTypeManager.createResourceType(resourceType);
 
         if (poolAccountNames != null && poolAccountNames.length > 0) {
             for (int i = 0; i < poolAccountNames.length; i++) {
@@ -145,7 +145,7 @@ public class WebController {
                 if (accountName != null && !accountName.trim().isEmpty()) {
                     Double balance = (poolAccountInitialBalances != null && i < poolAccountInitialBalances.length)
                             ? poolAccountInitialBalances[i] : null;
-                    resourceTypeService.createPoolAccountForResourceType(savedResourceType.getId(), accountName, balance);
+                    resourceTypeManager.createPoolAccountForResourceType(savedResourceType.getId(), accountName, balance);
                 }
             }
         }
@@ -155,7 +155,7 @@ public class WebController {
 
     @GetMapping("/resource-types/{id}")
     public String resourceTypeDetail(@PathVariable Long id, Model model) {
-        Optional<ResourceType> resourceType = resourceTypeService.getResourceTypeById(id);
+        Optional<ResourceType> resourceType = resourceTypeManager.getResourceTypeById(id);
         if (resourceType.isPresent()) {
             model.addAttribute("resourceType", resourceType.get());
             return "resource-type-detail";
@@ -167,29 +167,29 @@ public class WebController {
     public String createPoolAccount(@PathVariable Long id,
                                     @RequestParam String accountName,
                                     @RequestParam(required = false) Double initialBalance) {
-        resourceTypeService.createPoolAccountForResourceType(id, accountName, initialBalance);
+        resourceTypeManager.createPoolAccountForResourceType(id, accountName, initialBalance);
         return "redirect:/resource-types/" + id;
     }
 
     @PostMapping("/resource-types/{id}/delete")
     public String deleteResourceType(@PathVariable Long id) {
-        resourceTypeService.deleteResourceType(id);
+        resourceTypeManager.deleteResourceType(id);
         return "redirect:/resource-types";
     }
 
     @PostMapping("/plans")
     public String createPlan(@ModelAttribute Plan plan) {
-        planService.createPlan(plan);
+        planManager.createPlan(plan);
         return "redirect:/plans";
     }
 
     @GetMapping("/plans/{id}")
     public String planDetail(@PathVariable Long id, Model model) {
-        Optional<Plan> plan = planService.getPlanById(id);
+        Optional<Plan> plan = planManager.getPlanById(id);
         if (plan.isPresent()) {
             model.addAttribute("plan", plan.get());
-            model.addAttribute("protocols", protocolService.getAllProtocols());
-            model.addAttribute("resourceTypes", resourceTypeService.getAllResourceTypes());
+            model.addAttribute("protocols", protocolManager.getAllProtocols());
+            model.addAttribute("resourceTypes", resourceTypeManager.getAllResourceTypes());
             return "plan-detail";
         }
         return "redirect:/plans";
@@ -203,13 +203,13 @@ public class WebController {
                                    @RequestParam String kind,
                                    @RequestParam(required = false) String assetId,
                                    @RequestParam(required = false) String timePeriod) {
-        actionService.allocateResource(actionId, resourceTypeId, quantity, kind, assetId, timePeriod);
+        actionManager.allocateResource(actionId, resourceTypeId, quantity, kind, assetId, timePeriod);
         return "redirect:/plans/" + planId;
     }
 
     @PostMapping("/plans/from-protocol")
     public String createPlanFromProtocol(@RequestParam Long protocolId, @RequestParam String planName) {
-        Plan plan = planService.createPlanFromProtocol(protocolId, planName);
+        Plan plan = planManager.createPlanFromProtocol(protocolId, planName);
         return "redirect:/plans/" + plan.getId();
     }
 
@@ -221,7 +221,7 @@ public class WebController {
         plan.setName(planName);
 
         // Create the plan first
-        Plan savedPlan = planService.createPlan(plan);
+        Plan savedPlan = planManager.createPlan(plan);
 
         // Add steps if any were provided
         if (stepNames != null && stepNames.length > 0) {
@@ -231,9 +231,9 @@ public class WebController {
                     String stepType = (stepTypes != null && i < stepTypes.length) ? stepTypes[i] : "ACTION";
                     
                     if ("SUB_PLAN".equals(stepType)) {
-                        planService.addSubPlanToPlan(savedPlan.getId(), stepName);
+                        planManager.addSubPlanToPlan(savedPlan.getId(), stepName);
                     } else {
-                        planService.addActionToPlan(savedPlan.getId(), stepName);
+                        planManager.addActionToPlan(savedPlan.getId(), stepName);
                     }
                 }
             }
@@ -244,19 +244,19 @@ public class WebController {
 
     @PostMapping("/plans/{id}/actions")
     public String addActionToPlan(@PathVariable Long id, @RequestParam String actionName) {
-        planService.addActionToPlan(id, actionName);
+        planManager.addActionToPlan(id, actionName);
         return "redirect:/plans/" + id;
     }
 
     @PostMapping("/plans/{id}/sub-plans")
     public String addSubPlanToPlan(@PathVariable Long id, @RequestParam String subPlanName) {
-        planService.addSubPlanToPlan(id, subPlanName);
+        planManager.addSubPlanToPlan(id, subPlanName);
         return "redirect:/plans/" + id;
     }
 
     @PostMapping("/plans/{id}/delete")
     public String deletePlan(@PathVariable Long id) {
-        planService.deletePlan(id);
+        planManager.deletePlan(id);
         return "redirect:/plans";
     }
 }

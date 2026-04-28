@@ -18,7 +18,7 @@ public class PlanningLedgerTests {
     private ProtocolRepository protocolRepository;
 
     @InjectMocks
-    private ProtocolService protocolService;
+    private ProtocolManager protocolManager;
 
     @Test
     void createProtocol_validInput_protocolCreated() {
@@ -28,7 +28,7 @@ public class PlanningLedgerTests {
         when(protocolRepository.save(protocol)).thenReturn(protocol);
 
         // Act
-        Protocol result = protocolService.createProtocol(protocol);
+        Protocol result = protocolManager.createProtocol(protocol);
 
         // Assert
         assertEquals("Test Protocol", result.getName());
