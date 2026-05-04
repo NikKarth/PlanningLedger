@@ -10,6 +10,22 @@ interface ActionState {
     void complete(ActionContext ctx);
     void abandon(ActionContext ctx);
     String name();
+
+    default void submitForApproval(ActionContext ctx) {
+        throw new IllegalStateTransitionException("Cannot submit for approval from " + name() + " state");
+    }
+
+    default void approve(ActionContext ctx) {
+        throw new IllegalStateTransitionException("Cannot approve from " + name() + " state");
+    }
+
+    default void reject(ActionContext ctx) {
+        throw new IllegalStateTransitionException("Cannot reject from " + name() + " state");
+    }
+
+    default void reopen(ActionContext ctx) {
+        throw new IllegalStateTransitionException("Cannot reopen from " + name() + " state");
+    }
 }
 
 // Context
@@ -30,7 +46,7 @@ class ActionContext {
 class ProposedState implements ActionState {
     @Override
     public void implement(ActionContext ctx) {
-        ctx.getAction().setState("IN_PROGRESS");
+        throw new IllegalStateTransitionException("Cannot implement directly from PROPOSED state");
     }
 
     @Override
@@ -56,6 +72,11 @@ class ProposedState implements ActionState {
     @Override
     public String name() {
         return "PROPOSED";
+    }
+
+    @Override
+    public void submitForApproval(ActionContext ctx) {
+        ctx.getAction().setState("PENDING_APPROVAL");
     }
 }
 
@@ -106,7 +127,7 @@ class SuspendedState implements ActionState {
 
     @Override
     public void resume(ActionContext ctx) {
-        ctx.getAction().setState("PROPOSED");
+        ctx.getAction().setState("IN_PROGRESS");
     }
 
     @Override
@@ -188,6 +209,82 @@ class AbandonedState implements ActionState {
     @Override
     public String name() {
         return "ABANDONED";
+    }
+}
+
+@Component
+class PendingApprovalState implements ActionState {
+    @Override
+    public void implement(ActionContext ctx) {
+        throw new IllegalStateTransitionException("Cannot implement from PENDING_APPROVAL state");
+    }
+
+    @Override
+    public void suspend(ActionContext ctx, String reason) {
+        throw new IllegalStateTransitionException("Cannot suspend from PENDING_APPROVAL state");
+    }
+
+    @Override
+    public void resume(ActionContext ctx) {
+        throw new IllegalStateTransitionException("Cannot resume from PENDING_APPROVAL state");
+    }
+
+    @Override
+    public void complete(ActionContext ctx) {
+        throw new IllegalStateTransitionException("Cannot complete from PENDING_APPROVAL state");
+    }
+
+    @Override
+    public void abandon(ActionContext ctx) {
+        throw new IllegalStateTransitionException("Cannot abandon from PENDING_APPROVAL state");
+    }
+
+    @Override
+    public String name() {
+        return "PENDING_APPROVAL";
+    }
+
+    @Override
+    public void approve(ActionContext ctx) {
+        ctx.getAction().setState("IN_PROGRESS");
+    }
+
+    @Override
+    public void reject(ActionContext ctx) {
+        ctx.getAction().setState("PROPOSED");
+    }
+}
+
+@Component
+class ReopenedState implements ActionState {
+    @Override
+    public void implement(ActionContext ctx) {
+        throw new IllegalStateTransitionException("Cannot implement from REOPENED state");
+    }
+
+    @Override
+    public void suspend(ActionContext ctx, String reason) {
+        throw new IllegalStateTransitionException("Cannot suspend from REOPENED state");
+    }
+
+    @Override
+    public void resume(ActionContext ctx) {
+        throw new IllegalStateTransitionException("Cannot resume from REOPENED state");
+    }
+
+    @Override
+    public void complete(ActionContext ctx) {
+        ctx.getAction().setState("COMPLETED");
+    }
+
+    @Override
+    public void abandon(ActionContext ctx) {
+        ctx.getAction().setState("ABANDONED");
+    }
+
+    @Override
+    public String name() {
+        return "REOPENED";
     }
 }
 

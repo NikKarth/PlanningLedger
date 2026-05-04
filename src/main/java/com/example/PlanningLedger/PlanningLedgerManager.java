@@ -260,6 +260,9 @@ class ActionManager {
     @Autowired
     private EntryRepository entryRepository;
 
+    @Autowired
+    private ReversalLedgerEntryGenerator reversalLedgerEntryGenerator;
+
     public ProposedAction implementAction(Long id) {
         ProposedAction action = proposedActionRepository.findById(id).orElseThrow();
         action.setState("IN_PROGRESS");
@@ -289,7 +292,7 @@ class ActionManager {
 
     public ProposedAction resumeAction(Long id) {
         ProposedAction action = proposedActionRepository.findById(id).orElseThrow();
-        action.setState("PROPOSED");
+        action.setState("IN_PROGRESS");
         return proposedActionRepository.save(action);
     }
 
@@ -297,6 +300,44 @@ class ActionManager {
         ProposedAction action = proposedActionRepository.findById(id).orElseThrow();
         action.setState("ABANDONED");
         return proposedActionRepository.save(action);
+    }
+
+    public ProposedAction submitForApprovalAction(Long id) {
+        ProposedAction action = proposedActionRepository.findById(id).orElseThrow();
+        action.setState("PENDING_APPROVAL");
+        return proposedActionRepository.save(action);
+    }
+
+    public ProposedAction approveAction(Long id) {
+        ProposedAction action = proposedActionRepository.findById(id).orElseThrow();
+        action.setState("IN_PROGRESS");
+        proposedActionRepository.save(action);
+
+        ImplementedAction impl = new ImplementedAction();
+        impl.setProposedAction(action);
+        impl.setActualStart(new java.util.Date());
+        impl.setActualParty("Default Party");
+        impl.setActualLocation("Default Location");
+        implementedActionRepository.save(impl);
+
+        return action;
+    }
+
+    public ProposedAction rejectAction(Long id) {
+        ProposedAction action = proposedActionRepository.findById(id).orElseThrow();
+        action.setState("PROPOSED");
+        return proposedActionRepository.save(action);
+    }
+
+    public ProposedAction reopenAction(Long id) {
+        ProposedAction action = proposedActionRepository.findById(id).orElseThrow();
+        action.setState("REOPENED");
+        proposedActionRepository.save(action);
+        ImplementedAction impl = action.getImplementedAction();
+        if (impl != null) {
+            reversalLedgerEntryGenerator.generateEntries(impl);
+        }
+        return action;
     }
 
     public ResourceAllocation allocateResource(Long actionId, Long resourceTypeId,

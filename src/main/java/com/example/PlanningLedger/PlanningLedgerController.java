@@ -85,4 +85,24 @@ class ActionController {
     public void abandonAction(@PathVariable Long id) {
         actionManager.abandonAction(id);
     }
+
+    @PostMapping("/{id}/submit-for-approval")
+    public void submitForApprovalAction(@PathVariable Long id) {
+        actionManager.submitForApprovalAction(id);
+    }
+
+    @PostMapping("/{id}/approve")
+    public void approveAction(@PathVariable Long id) {
+        actionManager.approveAction(id);
+    }
+
+    @PostMapping("/{id}/reject")
+    public void rejectAction(@PathVariable Long id) {
+        actionManager.rejectAction(id);
+    }
+
+    @PostMapping("/{id}/reopen")
+    public void reopenAction(@PathVariable Long id) {
+        actionManager.reopenAction(id);
+    }
 }
