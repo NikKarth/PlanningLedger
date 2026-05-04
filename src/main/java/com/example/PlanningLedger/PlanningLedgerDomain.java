@@ -54,7 +54,7 @@ class ResourceType {
     private String name;
     private String kind; // ASSET or CONSUMABLE
     private String unit;
-    private Double unitCost; // Unit cost for resource pricing
+    private Double unitCost = 1.0; // Unit cost for resource pricing, default 1.0
 
     @OneToMany(mappedBy = "resourceType", cascade = CascadeType.ALL)
     private List<Account> poolAccounts = new ArrayList<>();
