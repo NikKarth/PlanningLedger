@@ -21,3 +21,5 @@ interface ImplementedActionRepository extends JpaRepository<ImplementedAction, L
 interface ResourceAllocationRepository extends JpaRepository<ResourceAllocation, Long> {}
 
 interface EntryRepository extends JpaRepository<Entry, Long> {}
+
+interface AuditLogEntryRepository extends JpaRepository<AuditLogEntry, Long> {}

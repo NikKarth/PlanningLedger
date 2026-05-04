@@ -30,6 +30,11 @@
         .account-entries.active { display: block; }
         .no-entries { color: #888; font-style: italic; padding: 16px 0; }
         .entry-count { font-size: 0.85em; color: #666; font-weight: normal; margin-left: 8px; }
+        .filter-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+        .filter-bar span { font-weight: bold; margin-right: 4px; }
+        .filter-btn { padding: 6px 14px; border: 1px solid #007bff; border-radius: 4px; background: white; color: #007bff; cursor: pointer; font-size: 13px; }
+        .filter-btn:hover { background: #e8f0fe; }
+        .filter-btn.active { background: #007bff; color: white; }
     </style>
 </head>
 <body>
@@ -44,6 +49,13 @@
     </div>
 
     <h1>Ledger</h1>
+
+    <div class="filter-bar">
+        <span>Show:</span>
+        <button class="filter-btn active" id="filter-all"        onclick="filterLedger('all')">All entries</button>
+        <button class="filter-btn"        id="filter-consumable" onclick="filterLedger('CONSUMABLE')">Consumable entries</button>
+        <button class="filter-btn"        id="filter-asset"      onclick="filterLedger('ASSET')">Asset entries</button>
+    </div>
 
     <!-- Pool account balances summary -->
     <div class="section">
@@ -60,7 +72,8 @@
                 </tr>
             </thead>
             <tbody>
-                <tr th:each="account : ${accounts}">
+                <tr th:each="account : ${accounts}"
+                    th:attr="data-kind=${account.resourceType != null ? account.resourceType.kind : 'UNKNOWN'}">
                     <td th:text="${account.name}"></td>
                     <td th:text="${account.resourceType != null ? account.resourceType.name : '—'}"></td>
                     <td th:text="${account.resourceType != null ? account.resourceType.unit : '—'}"></td>
@@ -88,6 +101,7 @@
                     <option value="">-- Select an account --</option>
                     <option th:each="account : ${accounts}"
                             th:value="${account.id}"
+                            th:attr="data-kind=${account.resourceType != null ? account.resourceType.kind : 'UNKNOWN'}"
                             th:text="${account.name + (account.resourceType != null ? ' (' + account.resourceType.name + ')' : '')}">
                     </option>
                 </select>
@@ -95,6 +109,7 @@
 
             <div th:each="account : ${accounts}"
                  th:id="'entries-' + ${account.id}"
+                 th:attr="data-kind=${account.resourceType != null ? account.resourceType.kind : 'UNKNOWN'}"
                  class="account-entries">
 
                 <h3>
@@ -140,6 +155,27 @@
             var target = document.getElementById('entries-' + accountId);
             if (target) target.classList.add('active');
         }
+    }
+
+    function filterLedger(kind) {
+        document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+        var btnId = 'filter-' + kind.toLowerCase();
+        var btn = document.getElementById(btnId);
+        if (btn) btn.classList.add('active');
+
+        document.querySelectorAll('tr[data-kind]').forEach(function(row) {
+            row.style.display = (kind === 'all' || row.getAttribute('data-kind') === kind) ? '' : 'none';
+        });
+
+        var select = document.getElementById('accountSelect');
+        Array.from(select.options).forEach(function(opt) {
+            var matches = kind === 'all' || opt.getAttribute('data-kind') === kind;
+            opt.hidden = !matches;
+            if (!matches && opt.selected) {
+                select.value = '';
+                document.querySelectorAll('.account-entries').forEach(function(el) { el.classList.remove('active'); });
+            }
+        });
     }
 </script>
 </body>

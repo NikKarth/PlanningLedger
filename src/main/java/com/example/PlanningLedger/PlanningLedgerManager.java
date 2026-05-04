@@ -263,6 +263,12 @@ class ActionManager {
     @Autowired
     private ReversalLedgerEntryGenerator reversalLedgerEntryGenerator;
 
+    @Autowired
+    private ConsumableLedgerEntryGenerator consumableLedgerEntryGenerator;
+
+    @Autowired
+    private AssetLedgerEntryGenerator assetLedgerEntryGenerator;
+
     public ProposedAction implementAction(Long id) {
         ProposedAction action = proposedActionRepository.findById(id).orElseThrow();
         action.setState("IN_PROGRESS");
@@ -281,7 +287,13 @@ class ActionManager {
     public ProposedAction completeAction(Long id) {
         ProposedAction action = proposedActionRepository.findById(id).orElseThrow();
         action.setState("COMPLETED");
-        return proposedActionRepository.save(action);
+        proposedActionRepository.save(action);
+        ImplementedAction impl = action.getImplementedAction();
+        if (impl != null) {
+            consumableLedgerEntryGenerator.generateEntries(impl);
+            assetLedgerEntryGenerator.generateEntries(impl);
+        }
+        return action;
     }
 
     public ProposedAction suspendAction(Long id) {
