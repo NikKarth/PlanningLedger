@@ -322,87 +322,110 @@
             </div>
         </div>
 
+        <!-- Depth slider (only shown when the plan has nested nodes) -->
+        <div th:if="${maxTreeDepth > 0}" class="section">
+            <h3>Tree Depth</h3>
+            <div class="form-section" style="display:flex;align-items:center;gap:14px;padding:12px 16px;">
+                <label for="depthSlider" style="white-space:nowrap;font-weight:bold;">
+                    Depth: <span id="depthLabel" th:text="${maxDepth}"></span>
+                    / <span th:text="${maxTreeDepth}"></span>
+                </label>
+                <input type="range" id="depthSlider"
+                       min="0" th:max="${maxTreeDepth}" th:value="${maxDepth}"
+                       style="flex:1;min-width:160px;"
+                       oninput="document.getElementById('depthLabel').textContent = this.value"
+                       onchange="applyDepth(this.value)">
+                <span style="font-size:0.82em;color:#888;">0 = root only &nbsp;·&nbsp; <span th:text="${maxTreeDepth}"></span> = full tree</span>
+            </div>
+        </div>
+
         <div class="section">
             <h3>Plan Structure</h3>
             <div class="plan-tree">
-                <div class="tree-node root">
-                    <div class="node-type">PLAN</div>
-                    <div class="node-name" th:text="${plan.name}">Plan Name</div>
-                    <div class="node-status">
-                        <span th:class="'status status-' + ${plan.status}" th:text="${plan.status}">PROPOSED</span>
-                    </div>
-                    <div class="tree-children">
-                        <div th:each="child : ${plan.children}" class="tree-node">
-                            <div class="node-type" th:text="${child.class.simpleName}">NODE_TYPE</div>
-                            <div class="node-name" th:text="${child.name}">Node Name</div>
+                <div th:each="row : ${treeRows}" class="tree-node"
+                     th:classappend="${row.depth == 0} ? ' root' : ''">
+                    <div style="display:flex;align-items:flex-start;gap:0;">
+                        <!-- depth indent -->
+                        <span th:if="${row.depth > 0}"
+                              th:style="'display:inline-block;width:' + ${(row.depth - 1) * 22} + 'px;flex-shrink:0'"></span>
+                        <span th:if="${row.depth > 0}"
+                              style="color:#007bff;margin-right:6px;flex-shrink:0;">&#9492;&#9472;</span>
+                        <div style="flex:1;">
+                            <div class="node-type" th:text="${row.nodeTypeName}"></div>
+                            <div class="node-name" th:text="${row.node.name}"></div>
                             <div class="node-status">
-                                <span th:class="'status status-' + ${child.status}" th:text="${child.status}">STATUS</span>
+                                <span th:class="'status status-' + ${row.node.status}"
+                                      th:text="${row.node.status}"></span>
                             </div>
-                            <div th:if="${child instanceof T(com.example.PlanningLedger.ProposedAction) and child.implementedAction != null}"
-                                 class="implemented-note">
-                                <span>Started: <span th:text="${#dates.format(child.implementedAction.actualStart, 'dd MMM yyyy HH:mm')}"></span></span>
-                                <span>Party: <span th:text="${child.implementedAction.actualParty}"></span></span>
-                                <span>Location: <span th:text="${child.implementedAction.actualLocation}"></span></span>
+                            <!-- Truncation indicator -->
+                            <div th:if="${row.truncated}"
+                                 style="font-size:0.8em;color:#999;font-style:italic;margin-top:4px;">
+                                &#9660; children hidden — increase depth to expand
                             </div>
-                            <div th:if="${child instanceof T(com.example.PlanningLedger.ProposedAction) and !child.allocations.isEmpty()}"
-                                 class="allocations-list">
-                                <div th:each="alloc : ${child.allocations}" class="alloc-item">
-                                    <span th:class="'alloc-kind-badge ' + ${alloc.kind}" th:text="${alloc.kind}"></span>
-                                    <strong th:text="${alloc.resourceType.name}"></strong>
-                                    <span th:text="${alloc.quantity}"></span>
-                                    <span th:text="${alloc.resourceType.unit}"></span>
-                                    <span th:if="${alloc.assetId != null and !alloc.assetId.isEmpty()}">· <em th:text="${alloc.assetId}"></em></span>
-                                    <span th:if="${alloc.timePeriod != null and !alloc.timePeriod.isEmpty()}">(<span th:text="${alloc.timePeriod}"></span>)</span>
+                            <!-- Action-specific content -->
+                            <th:block th:if="${row.action != null}">
+                                <div th:if="${row.action.implementedAction != null}" class="implemented-note">
+                                    <span>Started: <span th:text="${#dates.format(row.action.implementedAction.actualStart, 'dd MMM yyyy HH:mm')}"></span></span>
+                                    <span>Party: <span th:text="${row.action.implementedAction.actualParty}"></span></span>
+                                    <span>Location: <span th:text="${row.action.implementedAction.actualLocation}"></span></span>
                                 </div>
-                            </div>
-                            <div th:if="${child instanceof T(com.example.PlanningLedger.ProposedAction)}">
-                                <form th:if="${resourceTypes != null and !#lists.isEmpty(resourceTypes)}"
-                                      th:action="@{'/plans/' + ${plan.id} + '/actions/' + ${child.id} + '/allocate'}"
-                                      method="post" class="alloc-form">
-                                    <select name="resourceTypeId" required>
-                                        <option value="">-- Resource --</option>
-                                        <option th:each="rt : ${resourceTypes}"
-                                                th:value="${rt.id}"
-                                                th:text="${rt.name + ' (' + rt.unit + ')'}"></option>
-                                    </select>
-                                    <input type="number" name="quantity" required placeholder="Qty" step="any" min="0">
-                                    <select name="kind" required onchange="toggleSpecific(this)">
-                                        <option value="GENERAL">GENERAL</option>
-                                        <option value="SPECIFIC">SPECIFIC</option>
-                                    </select>
-                                    <div class="specific-fields" style="display:none">
-                                        <input type="text" name="assetId" placeholder="Asset ID">
-                                        <input type="text" name="timePeriod" placeholder="Time period (optional)">
+                                <div th:if="${!row.action.allocations.isEmpty()}" class="allocations-list">
+                                    <div th:each="alloc : ${row.action.allocations}" class="alloc-item">
+                                        <span th:class="'alloc-kind-badge ' + ${alloc.kind}" th:text="${alloc.kind}"></span>
+                                        <strong th:text="${alloc.resourceType.name}"></strong>
+                                        <span th:text="${alloc.quantity}"></span>
+                                        <span th:text="${alloc.resourceType.unit}"></span>
+                                        <span th:if="${alloc.assetId != null and !alloc.assetId.isEmpty()}">· <em th:text="${alloc.assetId}"></em></span>
+                                        <span th:if="${alloc.timePeriod != null and !alloc.timePeriod.isEmpty()}">(<span th:text="${alloc.timePeriod}"></span>)</span>
                                     </div>
-                                    <button type="submit" class="alloc-btn">Allocate</button>
-                                </form>
-                                <div th:if="${resourceTypes == null or #lists.isEmpty(resourceTypes)}"
-                                     style="font-size:0.82em; color:#999; margin-top:8px;">
-                                    No resource types defined. <a href="/resource-types">Create one</a> to allocate resources.
                                 </div>
-                            </div>
-                            <div th:if="${child instanceof T(com.example.PlanningLedger.ProposedAction)}">
+                                <div>
+                                    <form th:if="${resourceTypes != null and !#lists.isEmpty(resourceTypes)}"
+                                          th:action="@{'/plans/' + ${plan.id} + '/actions/' + ${row.node.id} + '/allocate'}"
+                                          method="post" class="alloc-form">
+                                        <select name="resourceTypeId" required>
+                                            <option value="">-- Resource --</option>
+                                            <option th:each="rt : ${resourceTypes}"
+                                                    th:value="${rt.id}"
+                                                    th:text="${rt.name + ' (' + rt.unit + ')'}"></option>
+                                        </select>
+                                        <input type="number" name="quantity" required placeholder="Qty" step="any" min="0">
+                                        <select name="kind" required onchange="toggleSpecific(this)">
+                                            <option value="GENERAL">GENERAL</option>
+                                            <option value="SPECIFIC">SPECIFIC</option>
+                                        </select>
+                                        <div class="specific-fields" style="display:none">
+                                            <input type="text" name="assetId" placeholder="Asset ID">
+                                            <input type="text" name="timePeriod" placeholder="Time period (optional)">
+                                        </div>
+                                        <button type="submit" class="alloc-btn">Allocate</button>
+                                    </form>
+                                    <div th:if="${resourceTypes == null or #lists.isEmpty(resourceTypes)}"
+                                         style="font-size:0.82em;color:#999;margin-top:8px;">
+                                        No resource types defined. <a href="/resource-types">Create one</a> to allocate resources.
+                                    </div>
+                                </div>
                                 <select class="transition-select"
-                                        th:disabled="${child.status == 'ABANDONED'}"
-                                        th:attr="data-action-id=${child.id}"
+                                        th:disabled="${row.node.status == 'ABANDONED'}"
+                                        th:attr="data-action-id=${row.node.id}"
                                         onchange="transitionAction(this)">
                                     <option value="">-- Transition --</option>
-                                    <option th:if="${child.status == 'PROPOSED'}" value="submit-for-approval">submit for approval → PENDING_APPROVAL</option>
-                                    <option th:if="${child.status == 'PROPOSED' or child.status == 'IN_PROGRESS'}" value="suspend">suspend → SUSPENDED</option>
-                                    <option th:if="${child.status == 'PROPOSED' or child.status == 'IN_PROGRESS' or child.status == 'SUSPENDED' or child.status == 'REOPENED'}" value="abandon">abandon → ABANDONED</option>
-                                    <option th:if="${child.status == 'PENDING_APPROVAL'}" value="approve">approve → IN_PROGRESS</option>
-                                    <option th:if="${child.status == 'PENDING_APPROVAL'}" value="reject">reject → PROPOSED</option>
-                                    <option th:if="${child.status == 'IN_PROGRESS'}" value="complete">complete → COMPLETED</option>
-                                    <option th:if="${child.status == 'SUSPENDED'}" value="resume">resume → IN_PROGRESS</option>
-                                    <option th:if="${child.status == 'COMPLETED'}" value="reopen">reopen → REOPENED</option>
-                                    <option th:if="${child.status == 'REOPENED'}" value="complete">complete → COMPLETED</option>
+                                    <option th:if="${row.node.status == 'PROPOSED'}" value="submit-for-approval">submit for approval → PENDING_APPROVAL</option>
+                                    <option th:if="${row.node.status == 'PROPOSED' or row.node.status == 'IN_PROGRESS'}" value="suspend">suspend → SUSPENDED</option>
+                                    <option th:if="${row.node.status == 'PROPOSED' or row.node.status == 'IN_PROGRESS' or row.node.status == 'SUSPENDED' or row.node.status == 'REOPENED'}" value="abandon">abandon → ABANDONED</option>
+                                    <option th:if="${row.node.status == 'PENDING_APPROVAL'}" value="approve">approve → IN_PROGRESS</option>
+                                    <option th:if="${row.node.status == 'PENDING_APPROVAL'}" value="reject">reject → PROPOSED</option>
+                                    <option th:if="${row.node.status == 'IN_PROGRESS'}" value="complete">complete → COMPLETED</option>
+                                    <option th:if="${row.node.status == 'SUSPENDED'}" value="resume">resume → IN_PROGRESS</option>
+                                    <option th:if="${row.node.status == 'COMPLETED'}" value="reopen">reopen → REOPENED</option>
+                                    <option th:if="${row.node.status == 'REOPENED'}" value="complete">complete → COMPLETED</option>
                                 </select>
-                            </div>
-                        </div>
-                        <div th:if="${#lists.isEmpty(plan.children)}" class="tree-node">
-                            <em>No child nodes yet.</em>
+                            </th:block>
                         </div>
                     </div>
+                </div>
+                <div th:if="${#lists.isEmpty(treeRows)}" class="tree-node">
+                    <em>No nodes yet.</em>
                 </div>
             </div>
         </div>
@@ -418,6 +441,10 @@
         function toggleSpecific(selectEl) {
             var fields = selectEl.closest('.alloc-form').querySelector('.specific-fields');
             fields.style.display = selectEl.value === 'SPECIFIC' ? 'flex' : 'none';
+        }
+
+        function applyDepth(value) {
+            window.location.href = window.location.pathname + '?maxDepth=' + value;
         }
 
         function transitionAction(selectEl) {

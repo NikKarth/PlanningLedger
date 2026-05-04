@@ -30,11 +30,13 @@
         .node-type-plan   { font-size: 0.75em; font-weight: bold; color: #555; background: #e9ecef; padding: 1px 6px; border-radius: 3px; }
         .node-type-action { font-size: 0.75em; font-weight: bold; color: #004085; background: #cce5ff; padding: 1px 6px; border-radius: 3px; }
         .status { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; }
-        .status-PROPOSED    { background: #fff3cd; color: #856404; }
-        .status-IN_PROGRESS { background: #d1ecf1; color: #0c5460; }
-        .status-COMPLETED   { background: #d4edda; color: #155724; }
-        .status-SUSPENDED   { background: #f8d7da; color: #721c24; }
-        .status-ABANDONED   { background: #e2e3e5; color: #383d41; }
+        .status-PROPOSED         { background: #fff3cd; color: #856404; }
+        .status-IN_PROGRESS      { background: #d1ecf1; color: #0c5460; }
+        .status-COMPLETED        { background: #d4edda; color: #155724; }
+        .status-SUSPENDED        { background: #f8d7da; color: #721c24; }
+        .status-ABANDONED        { background: #e2e3e5; color: #383d41; }
+        .status-PENDING_APPROVAL { background: #fde8b4; color: #7b4f00; }
+        .status-REOPENED         { background: #e8d5f0; color: #5a0080; }
         .plan-row td { background: #f0f4ff; font-weight: bold; }
         .plan-row:hover td { background: #e4ecff; }
     </style>
@@ -63,6 +65,17 @@
                             th:text="${plan.name}"
                             th:selected="${plan.id == selectedPlanId}">
                     </option>
+                </select>
+                <label for="statusFilter">Filter by status:</label>
+                <select id="statusFilter" name="statusFilter" onchange="this.form.submit()">
+                    <option value="" th:selected="${statusFilter == null or statusFilter == ''}">All statuses</option>
+                    <option value="PROPOSED"          th:selected="${statusFilter == 'PROPOSED'}">PROPOSED</option>
+                    <option value="PENDING_APPROVAL"  th:selected="${statusFilter == 'PENDING_APPROVAL'}">PENDING_APPROVAL</option>
+                    <option value="IN_PROGRESS"       th:selected="${statusFilter == 'IN_PROGRESS'}">IN_PROGRESS</option>
+                    <option value="SUSPENDED"         th:selected="${statusFilter == 'SUSPENDED'}">SUSPENDED</option>
+                    <option value="COMPLETED"         th:selected="${statusFilter == 'COMPLETED'}">COMPLETED</option>
+                    <option value="REOPENED"          th:selected="${statusFilter == 'REOPENED'}">REOPENED</option>
+                    <option value="ABANDONED"         th:selected="${statusFilter == 'ABANDONED'}">ABANDONED</option>
                 </select>
             </div>
         </form>

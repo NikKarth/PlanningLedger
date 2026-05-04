@@ -22,11 +22,14 @@ public class WebController {
     private ActionManager actionManager;
 
     @GetMapping("/report")
-    public String report(@RequestParam(required = false) Long planId, Model model) {
+    public String report(@RequestParam(required = false) Long planId,
+                         @RequestParam(required = false) String statusFilter,
+                         Model model) {
         model.addAttribute("plans", planManager.getAllPlans());
         model.addAttribute("selectedPlanId", planId);
+        model.addAttribute("statusFilter", statusFilter);
         if (planId != null) {
-            model.addAttribute("reportRows", planManager.generateReport(planId));
+            model.addAttribute("reportRows", planManager.generateReport(planId, statusFilter));
             model.addAttribute("resourceTypes", resourceTypeManager.getAllResourceTypes());
         }
         return "report";
@@ -184,12 +187,18 @@ public class WebController {
     }
 
     @GetMapping("/plans/{id}")
-    public String planDetail(@PathVariable Long id, Model model) {
+    public String planDetail(@PathVariable Long id,
+                             @RequestParam(required = false) Integer maxDepth,
+                             Model model) {
         Optional<Plan> plan = planManager.getPlanById(id);
         if (plan.isPresent()) {
             model.addAttribute("plan", plan.get());
             model.addAttribute("protocols", protocolManager.getAllProtocols());
             model.addAttribute("resourceTypes", resourceTypeManager.getAllResourceTypes());
+            int maxTreeDepth = planManager.computeMaxTreeDepth(id);
+            model.addAttribute("maxTreeDepth", maxTreeDepth);
+            model.addAttribute("maxDepth", maxDepth != null ? maxDepth : maxTreeDepth);
+            model.addAttribute("treeRows", planManager.buildTreeRows(id, maxDepth));
             return "plan-detail";
         }
         return "redirect:/plans";

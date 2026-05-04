@@ -199,25 +199,73 @@ class PlanManager {
 
     @Transactional(readOnly = true)
     public List<PlanReportRow> generateReport(Long planId) {
+        return generateReport(planId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlanReportRow> generateReport(Long planId, String statusFilter) {
         Plan plan = planRepository.findById(planId).orElseThrow();
         List<ResourceType> resourceTypes = resourceTypeRepository.findAll();
-
         initializePlanNode(plan);
 
         List<PlanReportRow> rows = new ArrayList<>();
-        DepthFirstPlanIterator iterator = new DepthFirstPlanIterator(plan);
-        while (iterator.hasNext()) {
-            PlanNode node = iterator.next();
-            int depth = iterator.getCurrentDepth();
 
-            Map<String, Double> totals = new LinkedHashMap<>();
-            for (ResourceType rt : resourceTypes) {
-                totals.put(rt.getName() + " (" + rt.getUnit() + ")",
-                           node.getTotalAllocatedQuantity(rt));
+        if (statusFilter != null && !statusFilter.isEmpty()) {
+            FilteredPlanIterator iterator = new FilteredPlanIterator(plan,
+                    node -> statusFilter.equals(node.getStatus()));
+            while (iterator.hasNext()) {
+                PlanNode node = iterator.next();
+                rows.add(buildReportRow(node, iterator.getCurrentDepth(), resourceTypes));
             }
+        } else {
+            DepthFirstPlanIterator iterator = new DepthFirstPlanIterator(plan);
+            while (iterator.hasNext()) {
+                PlanNode node = iterator.next();
+                rows.add(buildReportRow(node, iterator.getCurrentDepth(), resourceTypes));
+            }
+        }
+        return rows;
+    }
 
-            String nodeType = (node instanceof Plan) ? "Plan" : "Action";
-            rows.add(new PlanReportRow(node.getName(), node.getStatus(), nodeType, depth, totals));
+    private PlanReportRow buildReportRow(PlanNode node, int depth, List<ResourceType> resourceTypes) {
+        Map<String, Double> totals = new LinkedHashMap<>();
+        for (ResourceType rt : resourceTypes) {
+            totals.put(rt.getName() + " (" + rt.getUnit() + ")", node.getTotalAllocatedQuantity(rt));
+        }
+        String nodeType = (node instanceof Plan) ? "Plan" : "Action";
+        return new PlanReportRow(node.getName(), node.getStatus(), nodeType, depth, totals);
+    }
+
+    @Transactional(readOnly = true)
+    public int computeMaxTreeDepth(Long planId) {
+        Plan plan = planRepository.findById(planId).orElseThrow();
+        initializePlanNode(plan);
+        int max = 0;
+        DepthFirstPlanIterator it = new DepthFirstPlanIterator(plan);
+        while (it.hasNext()) {
+            it.next();
+            max = Math.max(max, it.getCurrentDepth());
+        }
+        return max;
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlanTreeRow> buildTreeRows(Long planId, Integer maxDepth) {
+        Plan plan = planRepository.findById(planId).orElseThrow();
+        initializePlanNode(plan);
+        List<PlanTreeRow> rows = new ArrayList<>();
+        if (maxDepth != null) {
+            LazySubtreeIterator it = new LazySubtreeIterator(plan, maxDepth);
+            while (it.hasNext()) {
+                PlanNode n = it.next();
+                rows.add(new PlanTreeRow(n, it.getCurrentDepth(), it.isCurrentTruncated()));
+            }
+        } else {
+            DepthFirstPlanIterator it = new DepthFirstPlanIterator(plan);
+            while (it.hasNext()) {
+                PlanNode n = it.next();
+                rows.add(new PlanTreeRow(n, it.getCurrentDepth(), false));
+            }
         }
         return rows;
     }
