@@ -54,6 +54,7 @@ class ResourceType {
     private String name;
     private String kind; // ASSET or CONSUMABLE
     private String unit;
+    private Double unitCost; // Unit cost for resource pricing
 
     @OneToMany(mappedBy = "resourceType", cascade = CascadeType.ALL)
     private List<Account> poolAccounts = new ArrayList<>();
@@ -65,6 +66,8 @@ class ResourceType {
     public void setKind(String kind) { this.kind = kind; }
     public String getUnit() { return unit; }
     public void setUnit(String unit) { this.unit = unit; }
+    public Double getUnitCost() { return unitCost; }
+    public void setUnitCost(Double unitCost) { this.unitCost = unitCost; }
     public List<Account> getPoolAccounts() { return poolAccounts; }
     public void setPoolAccounts(List<Account> poolAccounts) { this.poolAccounts = poolAccounts; }
 }
@@ -247,7 +250,10 @@ class Plan extends PlanNode {
 
     @Override
     public void accept(PlanNodeVisitor visitor) {
-        visitor.visit(this);
+        visitor.visitComposite(this);
+        for (PlanNode child : children) {
+            child.accept(visitor);
+        }
     }
 
     public String getName() { return name; }
@@ -287,7 +293,7 @@ class ProposedAction extends PlanNode {
 
     @Override
     public void accept(PlanNodeVisitor visitor) {
-        visitor.visit(this);
+        visitor.visitLeaf(this);
     }
 
     public String getName() { return name; }
@@ -325,8 +331,8 @@ class ImplementedAction {
 
 // Visitor interface for composite pattern
 interface PlanNodeVisitor {
-    void visit(Plan plan);
-    void visit(ProposedAction action);
+    void visitLeaf(ProposedAction leaf);
+    void visitComposite(Plan plan);
 }
 
 @Entity
@@ -374,4 +380,91 @@ class AuditLogEntry {
     public Long getActionId() { return actionId; }
     public void setActionId(Long actionId) { this.actionId = actionId; }
     public Date getTimestamp() { return timestamp; }
+}
+
+// Concrete Visitors for metrics calculation
+
+class CompletionRatioVisitor implements PlanNodeVisitor {
+    private int totalLeaves = 0;
+    private int completedLeaves = 0;
+
+    @Override
+    public void visitLeaf(ProposedAction leaf) {
+        totalLeaves++;
+        if ("COMPLETED".equals(leaf.getStatus())) {
+            completedLeaves++;
+        }
+    }
+
+    @Override
+    public void visitComposite(Plan plan) {
+        // No action needed for composite nodes
+    }
+
+    public double getRatio() {
+        if (totalLeaves == 0) return 0.0;
+        return (double) completedLeaves / totalLeaves;
+    }
+}
+
+class ResourceCostVisitor implements PlanNodeVisitor {
+    private double totalCost = 0.0;
+
+    @Override
+    public void visitLeaf(ProposedAction leaf) {
+        for (ResourceAllocation alloc : leaf.getAllocations()) {
+            ResourceType resourceType = alloc.getResourceType();
+            Double unitCost = resourceType.getUnitCost();
+            if (unitCost != null && alloc.getQuantity() != null) {
+                totalCost += alloc.getQuantity() * unitCost;
+            }
+        }
+    }
+
+    @Override
+    public void visitComposite(Plan plan) {
+        // No action needed for composite nodes
+    }
+
+    public double getTotalCost() {
+        return totalCost;
+    }
+}
+
+class RiskScoreVisitor implements PlanNodeVisitor {
+    private int riskCount = 0;
+
+    @Override
+    public void visitLeaf(ProposedAction leaf) {
+        String status = leaf.getStatus();
+        if ("SUSPENDED".equals(status) || "ABANDONED".equals(status)) {
+            riskCount++;
+        }
+    }
+
+    @Override
+    public void visitComposite(Plan plan) {
+        // No action needed for composite nodes
+    }
+
+    public int getScore() {
+        return riskCount;
+    }
+}
+
+// DTO for metrics response
+class PlanNodeMetrics {
+    private double completionRatio;
+    private double totalResourceCost;
+    private int riskScore;
+
+    public PlanNodeMetrics(double completionRatio, double totalResourceCost, int riskScore) {
+        this.completionRatio = completionRatio;
+        this.totalResourceCost = totalResourceCost;
+        this.riskScore = riskScore;
+    }
+
+    public double getCompletionRatio() { return completionRatio; }
+    public double getTotalResourceCost() { return totalResourceCost; }
+    public int getRiskScore() { return riskScore; }
 }

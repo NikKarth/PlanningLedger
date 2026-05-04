@@ -53,6 +53,11 @@ class PlanController {
     public Optional<Plan> getPlanById(@PathVariable Long id) {
         return planManager.getPlanById(id);
     }
+
+    @GetMapping("/{id}/metrics")
+    public PlanNodeMetrics getMetrics(@PathVariable Long id) {
+        return planManager.getMetrics(id);
+    }
 }
 
 @RestController

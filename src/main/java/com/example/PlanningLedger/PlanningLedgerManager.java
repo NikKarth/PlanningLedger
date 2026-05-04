@@ -283,6 +283,42 @@ class PlanManager {
             }
         }
     }
+
+    @Transactional(readOnly = true)
+    public PlanNodeMetrics getMetrics(Long nodeId) {
+        // Try to find as Plan first
+        Optional<Plan> planOpt = planRepository.findById(nodeId);
+        if (planOpt.isPresent()) {
+            Plan plan = planOpt.get();
+            initializePlanNode(plan);
+            return calculateMetrics(plan);
+        }
+
+        // Try to find as ProposedAction
+        Optional<ProposedAction> actionOpt = proposedActionRepository.findById(nodeId);
+        if (actionOpt.isPresent()) {
+            ProposedAction action = actionOpt.get();
+            return calculateMetrics(action);
+        }
+
+        throw new RuntimeException("Plan node not found with id: " + nodeId);
+    }
+
+    private PlanNodeMetrics calculateMetrics(PlanNode node) {
+        CompletionRatioVisitor completionVisitor = new CompletionRatioVisitor();
+        ResourceCostVisitor costVisitor = new ResourceCostVisitor();
+        RiskScoreVisitor riskVisitor = new RiskScoreVisitor();
+
+        node.accept(completionVisitor);
+        node.accept(costVisitor);
+        node.accept(riskVisitor);
+
+        return new PlanNodeMetrics(
+            completionVisitor.getRatio(),
+            costVisitor.getTotalCost(),
+            riskVisitor.getScore()
+        );
+    }
 }
 
 @Service

@@ -276,6 +276,24 @@
             <p th:if="${plan.sourceProtocol}"><strong>Source Protocol:</strong> <span th:text="${plan.sourceProtocol.name}">Protocol Name</span></p>
         </div>
 
+        <div class="section">
+            <h3>Metrics</h3>
+            <div id="metricsPanel" class="form-section" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                <div style="text-align: center;">
+                    <div style="font-size: 2em; font-weight: bold; color: #007bff;" id="completionRatio">-</div>
+                    <div style="color: #666; margin-top: 5px;">Completion Ratio</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 2em; font-weight: bold; color: #28a745;" id="totalCost">-</div>
+                    <div style="color: #666; margin-top: 5px;">Total Resource Cost</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 2em; font-weight: bold; color: #dc3545;" id="riskScore">-</div>
+                    <div style="color: #666; margin-top: 5px;">Risk Score</div>
+                </div>
+            </div>
+        </div>
+
         <div th:if="${plan.sourceProtocol == null}" class="section">
             <h3>Create Plan from Protocol</h3>
             <div class="create-from-protocol">
@@ -464,6 +482,32 @@
                     selectEl.value = '';
                 });
         }
+
+        function loadMetrics() {
+            var planId = document.querySelector('.plan-header p:nth-child(3) span').textContent;
+            fetch('/api/plans/' + planId + '/metrics')
+                .then(function(response) {
+                    if (!response.ok) throw new Error('Failed to load metrics');
+                    return response.json();
+                })
+                .then(function(data) {
+                    var ratio = (data.completionRatio * 100).toFixed(1);
+                    document.getElementById('completionRatio').textContent = ratio + '%';
+                    document.getElementById('totalCost').textContent = '$' + data.totalResourceCost.toFixed(2);
+                    document.getElementById('riskScore').textContent = data.riskScore;
+                })
+                .catch(function(err) {
+                    console.error('Metrics loading error:', err);
+                    document.getElementById('completionRatio').textContent = 'Error';
+                    document.getElementById('totalCost').textContent = 'Error';
+                    document.getElementById('riskScore').textContent = 'Error';
+                });
+        }
+
+        // Load metrics when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadMetrics();
+        });
     </script>
 </body>
 </html>
